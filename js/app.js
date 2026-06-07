@@ -3,29 +3,41 @@ import { initAuth } from './auth.js';
 import { initDB, checkAutoCloseMonth } from './db.js';
 
 async function loadEnv() {
-  try {
-    if (window.location.protocol === 'file:') {
-      throw new Error("CORS Restriction: Fetching .env is not allowed using the file:// protocol. Please run a local web server (e.g., VS Code Live Server or 'npx http-server') to run this application.");
-    }
-    const response = await fetch('./.env');
-    if (!response.ok) {
-      throw new Error(`Failed to load .env file: ${response.status} ${response.statusText}`);
-    }
-    const text = await response.text();
-    const env = {};
-    text.split('\n').forEach(line => {
-      const parts = line.split('=');
-      if (parts.length >= 2) {
-        const key = parts[0].trim();
-        const value = parts.slice(1).join('=').trim().replace(/^["']|["']$/g, '');
-        env[key] = value;
-      }
-    });
-    return env;
-  } catch (e) {
-    console.error("Failed to load .env file", e);
-    throw e;
+  if (window.location.protocol === 'file:') {
+    throw new Error("CORS Restriction: Fetching configuration is not allowed using the file:// protocol. Please run a local web server (e.g., VS Code Live Server or 'npx http-server') to run this application.");
   }
+
+  // Try fetching .env
+  try {
+    const response = await fetch('./.env');
+    if (response.ok) {
+      const text = await response.text();
+      const env = {};
+      text.split('\n').forEach(line => {
+        const parts = line.split('=');
+        if (parts.length >= 2) {
+          const key = parts[0].trim();
+          const value = parts.slice(1).join('=').trim().replace(/^["']|["']$/g, '');
+          env[key] = value;
+        }
+      });
+      return env;
+    }
+  } catch (e) {
+    console.warn("Failed to fetch .env directly, trying fallback:", e);
+  }
+
+  // Fallback to env.json (useful for local development servers that block dotfiles)
+  try {
+    const jsonResponse = await fetch('./env.json');
+    if (jsonResponse.ok) {
+      return await jsonResponse.json();
+    }
+  } catch (e) {
+    console.warn("Failed to fetch env.json fallback:", e);
+  }
+
+  throw new Error("Failed to load environment configuration. Please ensure either '.env' or 'env.json' is present at the website root.");
 }
 
 let app;

@@ -1,4 +1,6 @@
 .env
 .env.local
+env.json
+env.json.local
 .system_generated/
 *.log
