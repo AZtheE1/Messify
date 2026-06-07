@@ -24,6 +24,9 @@ jobs:
           echo "FIREBASE_MESSAGING_SENDER_ID=\"${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}\"" >> .env
           echo "FIREBASE_APP_ID=\"${{ secrets.FIREBASE_APP_ID }}\"" >> .env
 
+      - name: Remove .gitignore to allow deployment of .env
+        run: rm .gitignore
+
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
