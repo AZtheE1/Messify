@@ -1,4 +1,4 @@
-const CACHE_NAME = 'messify-v1';
+const CACHE_NAME = 'messify-v2';
 const urlsToCache = [
   './index.html',
   './css/styles.css',
@@ -41,14 +41,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for other requests
+  // Network-first strategy for static resources
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then((response) => {
-        if (response) {
-          return response;
+        if (response && response.status === 200) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseClone);
+          });
         }
-        return fetch(event.request);
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request);
       })
   );
 });
