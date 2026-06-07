@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { initAuth } from './auth.js';
 import { initDB, checkAutoCloseMonth } from './db.js';
-import { setupUI } from './ui.js'; // Let's split UI logic or keep it here. I'll keep UI logic in app.js and call it UI routing.
 
 async function loadEnv() {
   try {
