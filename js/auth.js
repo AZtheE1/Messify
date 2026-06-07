@@ -1,6 +1,6 @@
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { state } from './app.js';
+import { state, switchView } from './app.js';
 import { setupDBListeners, stopDBListeners } from './db.js';
 
 let auth;
@@ -12,9 +12,11 @@ export async function initAuth(app) {
 
   const btnLogin = document.getElementById('btn-login');
   const btnLogout = document.getElementById('btn-logout');
+  const btnGoogleLogin = document.getElementById('btn-google-login');
 
-  btnLogin.addEventListener('click', login);
-  btnLogout.addEventListener('click', logout);
+  if (btnLogin) btnLogin.addEventListener('click', login);
+  if (btnLogout) btnLogout.addEventListener('click', logout);
+  if (btnGoogleLogin) btnGoogleLogin.addEventListener('click', login);
 
   return new Promise((resolve) => {
     onAuthStateChanged(auth, async (user) => {
@@ -48,8 +50,8 @@ export async function initAuth(app) {
           state.isAdmin = (memberSnap.data().role === 'admin');
         }
 
-        btnLogin.classList.add('hidden');
-        btnLogout.classList.remove('hidden');
+        if (btnLogin) btnLogin.classList.add('hidden');
+        if (btnLogout) btnLogout.classList.remove('hidden');
         document.getElementById('fab-add-bazar').classList.remove('hidden');
 
         if (state.isAdmin) {
@@ -58,16 +60,22 @@ export async function initAuth(app) {
           document.getElementById('nav-admin').classList.add('hidden');
         }
 
+        document.querySelector('.nav-links').classList.remove('hidden');
+        switchView('dashboard');
+
         await setupDBListeners();
         resolve(user);
       } else {
         state.currentUser = null;
         state.isAdmin = false;
-        btnLogin.classList.remove('hidden');
-        btnLogout.classList.add('hidden');
+        if (btnLogin) btnLogin.classList.remove('hidden');
+        if (btnLogout) btnLogout.classList.add('hidden');
         document.getElementById('nav-admin').classList.add('hidden');
         document.getElementById('fab-add-bazar').classList.add('hidden');
         
+        document.querySelector('.nav-links').classList.add('hidden');
+        switchView('login');
+
         stopDBListeners();
         resolve(null);
       }
