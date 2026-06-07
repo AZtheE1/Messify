@@ -13,7 +13,8 @@ service cloud.firestore {
 
     match /members/{memberId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == memberId;
+      allow update, delete: if isAdmin();
     }
 
     match /monthly_cycles/{cycleId} {

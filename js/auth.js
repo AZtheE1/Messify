@@ -20,63 +20,72 @@ export async function initAuth(app) {
 
   return new Promise((resolve) => {
     onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        state.currentUser = user;
-        
-        // Check if member exists
-        const memberRef = doc(db, 'members', user.uid);
-        let memberSnap;
-        try {
-          memberSnap = await getDoc(memberRef);
-        } catch(e) {
-          console.error("Error fetching member", e);
-        }
-
-        if (!memberSnap || !memberSnap.exists()) {
-          // Check if first user ever
-          const membersSnap = await getDocs(collection(db, 'members'));
-          const role = membersSnap.empty ? 'admin' : 'member';
+      try {
+        if (user) {
+          state.currentUser = user;
           
-          await setDoc(memberRef, {
-            uid: user.uid,
-            name: user.displayName || 'Unknown User',
-            email: user.email,
-            role: role,
-            joinedAt: new Date().toISOString(),
-            isActive: true
-          });
-          state.isAdmin = (role === 'admin');
-        } else {
-          state.isAdmin = (memberSnap.data().role === 'admin');
-        }
+          // Check if member exists
+          const memberRef = doc(db, 'members', user.uid);
+          let memberSnap;
+          try {
+            memberSnap = await getDoc(memberRef);
+          } catch(e) {
+            console.error("Error fetching member", e);
+          }
 
-        if (btnLogin) btnLogin.classList.add('hidden');
-        if (btnLogout) btnLogout.classList.remove('hidden');
-        document.getElementById('fab-add-bazar').classList.remove('hidden');
+          if (!memberSnap || !memberSnap.exists()) {
+            // Check if first user ever
+            const membersSnap = await getDocs(collection(db, 'members'));
+            const role = membersSnap.empty ? 'admin' : 'member';
+            
+            await setDoc(memberRef, {
+              uid: user.uid,
+              name: user.displayName || 'Unknown User',
+              email: user.email,
+              role: role,
+              joinedAt: new Date().toISOString(),
+              isActive: true
+            });
+            state.isAdmin = (role === 'admin');
+          } else {
+            state.isAdmin = (memberSnap.data().role === 'admin');
+          }
 
-        if (state.isAdmin) {
-          document.getElementById('nav-admin').classList.remove('hidden');
+          if (btnLogin) btnLogin.classList.add('hidden');
+          if (btnLogout) btnLogout.classList.remove('hidden');
+          document.getElementById('fab-add-bazar').classList.remove('hidden');
+
+          if (state.isAdmin) {
+            document.getElementById('nav-admin').classList.remove('hidden');
+          } else {
+            document.getElementById('nav-admin').classList.add('hidden');
+          }
+
+          document.querySelector('.nav-links').classList.remove('hidden');
+          switchView('dashboard');
+
+          await setupDBListeners();
+          resolve(user);
         } else {
+          state.currentUser = null;
+          state.isAdmin = false;
+          if (btnLogin) btnLogin.classList.remove('hidden');
+          if (btnLogout) btnLogout.classList.add('hidden');
           document.getElementById('nav-admin').classList.add('hidden');
+          document.getElementById('fab-add-bazar').classList.add('hidden');
+          
+          document.querySelector('.nav-links').classList.add('hidden');
+          switchView('login');
+
+          stopDBListeners();
+          resolve(null);
         }
-
-        document.querySelector('.nav-links').classList.remove('hidden');
-        switchView('dashboard');
-
-        await setupDBListeners();
-        resolve(user);
-      } else {
-        state.currentUser = null;
-        state.isAdmin = false;
-        if (btnLogin) btnLogin.classList.remove('hidden');
-        if (btnLogout) btnLogout.classList.add('hidden');
-        document.getElementById('nav-admin').classList.add('hidden');
-        document.getElementById('fab-add-bazar').classList.add('hidden');
-        
+      } catch (error) {
+        console.error("Auth state change error:", error);
+        Swal.fire('Login Initialization Failed', error.message, 'error');
+        // Fallback to login view on error
         document.querySelector('.nav-links').classList.add('hidden');
         switchView('login');
-
-        stopDBListeners();
         resolve(null);
       }
     });
