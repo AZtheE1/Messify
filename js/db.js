@@ -14,6 +14,7 @@ export async function initDB(app) {
 }
 
 export async function checkAutoCloseMonth() {
+  if (!db) db = getFirestore();
   const lastCheck = localStorage.getItem('messify_last_close_check');
   const now = new Date();
   const currentYYYYMM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -68,6 +69,7 @@ export async function checkAutoCloseMonth() {
 }
 
 export async function setupDBListeners() {
+  if (!db) db = getFirestore();
   // Members Listener
   unsubMembers = onSnapshot(collection(db, 'members'), (snapshot) => {
     activeMembers = [];
