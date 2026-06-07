@@ -3,17 +3,28 @@ import { initAuth } from './auth.js';
 import { initDB, checkAutoCloseMonth } from './db.js';
 import { setupUI } from './ui.js'; // Let's split UI logic or keep it here. I'll keep UI logic in app.js and call it UI routing.
 
-// 🔧 REPLACE WITH YOUR FIREBASE PROJECT CONFIG
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+async function loadEnv() {
+  try {
+    const response = await fetch('./.env');
+    const text = await response.text();
+    const env = {};
+    text.split('\n').forEach(line => {
+      const parts = line.split('=');
+      if (parts.length >= 2) {
+        const key = parts[0].trim();
+        const value = parts.slice(1).join('=').trim().replace(/^["']|["']$/g, '');
+        env[key] = value;
+      }
+    });
+    return env;
+  } catch (e) {
+    console.error("Failed to load .env file", e);
+    return {};
+  }
+}
 
-const app = initializeApp(firebaseConfig);
+let app;
+
 
 // Global State
 export const state = {
@@ -78,6 +89,18 @@ if ('serviceWorker' in navigator) {
 
 // Initialize App
 async function bootstrap() {
+  const env = await loadEnv();
+  const firebaseConfig = {
+    apiKey: env.FIREBASE_API_KEY,
+    authDomain: env.FIREBASE_AUTH_DOMAIN,
+    projectId: env.FIREBASE_PROJECT_ID,
+    storageBucket: env.FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: env.FIREBASE_MESSAGING_SENDER_ID,
+    appId: env.FIREBASE_APP_ID
+  };
+  
+  app = initializeApp(firebaseConfig);
+
   await initAuth(app);
   await initDB(app);
   
