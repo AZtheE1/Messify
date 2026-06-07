@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messify - Hostel Management</title>
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#5A34A6">
+  
+  <!-- Google Fonts: Sora and DM Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Sora:wght@100..800&display=swap" rel="stylesheet">
+  
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <!-- html2pdf.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="active">
+    <div class="spinner"></div>
+    <p>Loading Messify...</p>
+  </div>
+
+  <!-- Navbar -->
+  <nav id="navbar" class="hidden">
+    <div class="nav-brand">Messify</div>
+    <ul class="nav-links">
+      <li><a href="#" data-target="dashboard" class="active">Dashboard</a></li>
+      <li><a href="#" data-target="members">Members</a></li>
+      <li><a href="#" data-target="analytics">Analytics</a></li>
+      <li><a href="#" data-target="history">History</a></li>
+      <li id="nav-admin" class="hidden"><a href="#" data-target="admin">Admin</a></li>
+    </ul>
+    <div class="nav-actions">
+      <button id="theme-toggle" class="btn-icon">🌙</button>
+      <button id="btn-login" class="btn-primary">Sign In</button>
+      <button id="btn-logout" class="btn-secondary hidden">Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main id="app-content" class="hidden">
+    
+    <!-- View: Dashboard -->
+    <section id="view-dashboard" class="view active">
+      <div class="hero-row">
+        <div class="global-status-card glass-card gradient-bg">
+          <div class="status-col">
+            <span class="label">Total Deposited</span>
+            <span class="value" id="dash-total-deposited">৳ 0</span>
+          </div>
+          <div class="status-col">
+            <span class="label">Total Spent</span>
+            <span class="value" id="dash-total-spent">৳ 0</span>
+          </div>
+          <div class="status-col">
+            <span class="label">Cash on Hand</span>
+            <span class="value" id="dash-cash-on-hand">৳ 0</span>
+          </div>
+          <div class="personal-status">
+            <span class="label">My Status:</span>
+            <span id="dash-my-status" class="badge badge-neutral">Loading...</span>
+          </div>
+        </div>
+        <div class="chart-card glass-card">
+          <canvas id="bazarDoughnutChart"></canvas>
+        </div>
+      </div>
+
+      <div class="bazar-ledger">
+        <h3>Daily Bazar Ledger</h3>
+        <div id="bazar-logs-container" class="logs-container">
+          <!-- Logs injected here -->
+          <div class="empty-state">No bazar logs yet.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- View: Members -->
+    <section id="view-members" class="view">
+      <div class="view-header">
+        <h2>Member Directory</h2>
+      </div>
+      <div class="table-container glass-card">
+        <table id="members-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Due / Advance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Members injected here -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- View: Analytics -->
+    <section id="view-analytics" class="view">
+      <div class="view-header">
+        <h2>Consumption Analytics</h2>
+        <select id="analytics-month-selector" class="input-field">
+          <!-- Options injected here -->
+        </select>
+      </div>
+      <div class="glass-card">
+        <div id="analytics-breakdown" class="analytics-container">
+          <!-- Categories injected here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- View: Admin -->
+    <section id="view-admin" class="view">
+      <h2>Admin Panel</h2>
+      
+      <div class="admin-grid">
+        <!-- Add Deposit -->
+        <div class="admin-card glass-card">
+          <h3>Record Deposit</h3>
+          <form id="form-deposit">
+            <select id="deposit-member" required class="input-field"></select>
+            <input type="number" id="deposit-amount" placeholder="Amount (৳)" required class="input-field" min="1" step="0.01">
+            <input type="date" id="deposit-date" required class="input-field">
+            <button type="submit" class="btn-primary full-width">Add Deposit</button>
+          </form>
+        </div>
+
+        <!-- Pending Bazar Approvals -->
+        <div class="admin-card glass-card">
+          <h3>Pending Bazar Requests</h3>
+          <div id="pending-requests-container" class="requests-container">
+            <!-- Requests injected here -->
+            <p>No pending requests.</p>
+          </div>
+        </div>
+
+        <!-- Meal Overrides & Month Close -->
+        <div class="admin-card glass-card">
+          <h3>Cycle Management</h3>
+          <p>Current Active Cycle: <strong id="admin-active-cycle">Loading...</strong></p>
+          <hr>
+          <h4>Meal Overrides</h4>
+          <form id="form-meal-override">
+            <select id="override-member" required class="input-field"></select>
+            <input type="number" id="override-meals" placeholder="Total Meals" required class="input-field" min="0" step="1">
+            <button type="submit" class="btn-secondary full-width">Set Override</button>
+          </form>
+          <hr>
+          <button id="btn-manual-close" class="btn-danger full-width">Force Close Month</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- View: History -->
+    <section id="view-history" class="view">
+      <h2>Cycle History</h2>
+      <div id="history-container" class="history-grid">
+        <!-- History cards injected here -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Floating Action Button -->
+  <button id="fab-add-bazar" class="fab hidden">+</button>
+
+  <!-- Bazar Form Modal (Multi-step) -->
+  <div id="bazar-modal" class="modal-overlay hidden">
+    <div class="modal-content glass-card">
+      <div class="modal-header">
+        <h3 id="bazar-step-title">Step 1: Entry Details</h3>
+        <button class="btn-close" id="btn-close-modal">×</button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Step 1 -->
+        <div id="bazar-step-1" class="modal-step active">
+          <label>Date</label>
+          <input type="date" id="bazar-date" class="input-field" required>
+          <label>Shopper</label>
+          <select id="bazar-shopper" class="input-field" required></select>
+        </div>
+
+        <!-- Step 2 -->
+        <div id="bazar-step-2" class="modal-step hidden">
+          <div id="bazar-items-container">
+            <!-- Dynamic rows injected here -->
+          </div>
+          <button id="btn-add-bazar-row" class="btn-secondary full-width">+ Add Item</button>
+          <div class="bazar-total-preview">
+            Total: ৳ <span id="bazar-live-total">0.00</span>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div id="bazar-step-3" class="modal-step hidden">
+          <h4>Review & Submit</h4>
+          <div id="bazar-review-summary" class="review-summary"></div>
+          <p class="review-total">Grand Total: ৳ <strong id="bazar-final-total">0.00</strong></p>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button id="btn-bazar-prev" class="btn-secondary hidden">Back</button>
+        <button id="btn-bazar-next" class="btn-primary">Next</button>
+        <button id="btn-bazar-submit" class="btn-success hidden">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden Div for PDF Generation -->
+  <div id="pdf-report-template" style="display: none;"></div>
+
+  <!-- Firebase SDKs (v10 JS modular via CDN) -->
+  <script type="module" src="./js/app.js"></script>
+
+</body>
+</html>
