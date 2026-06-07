@@ -5,7 +5,13 @@ import { setupUI } from './ui.js'; // Let's split UI logic or keep it here. I'll
 
 async function loadEnv() {
   try {
+    if (window.location.protocol === 'file:') {
+      throw new Error("CORS Restriction: Fetching .env is not allowed using the file:// protocol. Please run a local web server (e.g., VS Code Live Server or 'npx http-server') to run this application.");
+    }
     const response = await fetch('./.env');
+    if (!response.ok) {
+      throw new Error(`Failed to load .env file: ${response.status} ${response.statusText}`);
+    }
     const text = await response.text();
     const env = {};
     text.split('\n').forEach(line => {
@@ -19,7 +25,7 @@ async function loadEnv() {
     return env;
   } catch (e) {
     console.error("Failed to load .env file", e);
-    return {};
+    throw e;
   }
 }
 
@@ -89,25 +95,48 @@ if ('serviceWorker' in navigator) {
 
 // Initialize App
 async function bootstrap() {
-  const env = await loadEnv();
-  const firebaseConfig = {
-    apiKey: env.FIREBASE_API_KEY,
-    authDomain: env.FIREBASE_AUTH_DOMAIN,
-    projectId: env.FIREBASE_PROJECT_ID,
-    storageBucket: env.FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: env.FIREBASE_MESSAGING_SENDER_ID,
-    appId: env.FIREBASE_APP_ID
-  };
-  
-  app = initializeApp(firebaseConfig);
+  try {
+    const env = await loadEnv();
+    
+    if (!env.FIREBASE_API_KEY || env.FIREBASE_API_KEY.includes('YOUR_')) {
+      throw new Error("Firebase configuration keys are missing or invalid in your .env file.");
+    }
+    
+    const firebaseConfig = {
+      apiKey: env.FIREBASE_API_KEY,
+      authDomain: env.FIREBASE_AUTH_DOMAIN,
+      projectId: env.FIREBASE_PROJECT_ID,
+      storageBucket: env.FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: env.FIREBASE_MESSAGING_SENDER_ID,
+      appId: env.FIREBASE_APP_ID
+    };
+    
+    app = initializeApp(firebaseConfig);
 
-  await initAuth(app);
-  await initDB(app);
-  
-  // Hide loading
-  document.getElementById('loading-overlay').classList.remove('active');
-  document.getElementById('navbar').classList.remove('hidden');
-  document.getElementById('app-content').classList.remove('hidden');
+    await initAuth(app);
+    await initDB(app);
+    
+    // Hide loading
+    document.getElementById('loading-overlay').classList.remove('active');
+    document.getElementById('navbar').classList.remove('hidden');
+    document.getElementById('app-content').classList.remove('hidden');
+  } catch (error) {
+    console.error("Bootstrap Error:", error);
+    // Display error message instead of hanging spinner
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+      overlay.innerHTML = `
+        <div style="padding: 2rem; text-align: center; max-width: 500px; font-family: var(--font-display);">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+          <h2 style="color: var(--color-danger); margin-bottom: 1rem;">Configuration Error</h2>
+          <p style="color: var(--color-text-main); margin-bottom: 1.5rem; line-height: 1.5;">${error.message}</p>
+          <p style="font-size: 0.875rem; color: var(--color-text-muted);">
+            If you are deploying to GitHub Pages, make sure you have added your secrets to the repository and triggered the deployment action to generate the <code>.env</code> file.
+          </p>
+        </div>
+      `;
+    }
+  }
 }
 
 bootstrap();
